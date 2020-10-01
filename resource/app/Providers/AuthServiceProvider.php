@@ -14,7 +14,7 @@ class AuthServiceProvider extends ServiceProvider
      * @var array
      */
     protected $policies = [
-        // 'App\Models\Model' => 'App\Policies\ModelPolicy',
+        // 'App\Model' => 'App\Policies\ModelPolicy',
     ];
 
     /**
@@ -28,7 +28,17 @@ class AuthServiceProvider extends ServiceProvider
 
         Passport::routes();
 
-        Passport::hashClientSecrets();
+        // By default, client should only be able to do this and nothing more, except explitly stated in the scopes param
+        Passport::setDefaultScope([
+            'view-posts'
+        ]);
+
+        Passport::tokensCan([
+            'view-posts' => 'View Article posts',
+            'view-users' => 'View a list of all the users on the resource'
+        ]);
+
+        Passport::tokensExpireIn(now()->addSeconds(2));
 
     }
 }

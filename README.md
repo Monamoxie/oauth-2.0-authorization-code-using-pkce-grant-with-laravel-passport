@@ -16,5 +16,11 @@ For this, I am using Laravel Passport which is built on top the * League OAuth2 
 5. Refresh grant
 
 For this example, I will be using the Authorization Grant Using the PKCE approach. 
+https://tools.ietf.org/html/rfc7636#section-1.1
 
+# WHAT THIS APPROACH TRIES TO SOLVE
+
+You are not sure the client making this request can keep their secret key safe. You know the secret key is one of the most important credentials you need to authorize the request. So instead of issuing out a secret, you issue out a code challenge. 
+
+They send it in place of a secret when requesting for a token, you (the resource) verifies it by cracking the challenge and if it matches, you issue out the token 
 ## STEPS
