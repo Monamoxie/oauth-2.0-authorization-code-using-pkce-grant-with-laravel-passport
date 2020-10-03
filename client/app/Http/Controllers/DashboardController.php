@@ -27,7 +27,7 @@ class DashboardController extends Controller
                 'Authorization' => 'Bearer '. $userToken->access_token
             ])->get(env('RESOURCE_APP_URL') . 'api/user/resource/posts');
              
-            // dd($resourceResponse);
+            
             if($resourceResponse->status() === 200) {
                 $userPosts = $resourceResponse->json();
             }
