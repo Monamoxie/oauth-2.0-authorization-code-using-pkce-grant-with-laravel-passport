@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -26,32 +27,31 @@ class DashboardController extends Controller
                 'Authorization' => 'Bearer '. $userToken->access_token
             ])->get(env('RESOURCE_APP_URL') . 'api/user/resource/posts');
              
+            // dd($resourceResponse);
             if($resourceResponse->status() === 200) {
                 $userPosts = $resourceResponse->json();
             }
             
         }
-
+       
         return view('dashboard', compact('userPosts'));
     }
 
     public function approveRequest(Request $request)
     {
-         
+       
+        $codeVerifier = Str::random(128);
 
-        $request->session()->put('state', $state = Str::random(40));
-        
-        $codeVerifier = env('CODE_VERIFIER', Str::random(128)); 
-        dd($codeVerifier, env('CODE_VERIFIER'));
         $codeChallenge = strtr(rtrim(
             base64_encode(hash('sha256', $codeVerifier, true)), '='), '+/', '-_');
-    
+      
+        setcookie('code_verifier', $codeVerifier, time() + 120, '/');
+      
         $query = http_build_query([
             'client_id' => env('CLIENT_ID'),
             'redirect_uri' => env('APP_URL') . 'dashboard/oauth/callback',
             'response_type' => 'code',
-            'scope' => 'view-posts',
-            'state' => $state,
+            'scope' => 'view-posts', 
             'code_challenge' => $codeChallenge,
             'code_challenge_method' => 'S256',
         ]);
@@ -61,18 +61,21 @@ class DashboardController extends Controller
 
     public function requestCallback(Request $request)
     {   
-            dd(env('CODE_VERIFIER'));
+        $codeVerifier = '';
+        if(isset($_COOKIE['code_verifier'])) {
+            $codeVerifier = $_COOKIE['code_verifier'];
+        }
         
         $resourceResponse = Http::post(env('RESOURCE_APP_URL') . 'oauth/token', [
             'grant_type' => 'authorization_code',
             'client_id' => env('CLIENT_ID'), 
             'redirect_uri' => env('APP_URL') . 'dashboard/oauth/callback',
-            'code_verifier' =>  env('CODE_VERIFIER'),
+            'code_verifier' => $codeVerifier,
             'code' => $request->code,
         ]);
          
         $resourceResponse = json_decode($resourceResponse->getBody());
-            dd($resourceResponse);
+             
         if ($request->user()->userOAuthToken) {
             $request->user()->userOAuthToken()->delete();
         }
@@ -93,12 +96,11 @@ class DashboardController extends Controller
     public function refreshToken(Request $request)
     { 
         $userToken = auth()->user()->userOAuthToken;
-       
+        
         $resourceResponse = Http::post(env('RESOURCE_APP_URL') . 'oauth/token', [
             'grant_type' => 'refresh_token',
             'refresh_token' => $userToken->refresh_token,
             'client_id' => env('CLIENT_ID'),
-            'client_secret' => env('CLIENT_SECRET'),
             'redirect_uri' => env('APP_URL') . 'dashboard/oauth/callback',
             'scope' => 'view-posts'
         ]); 
